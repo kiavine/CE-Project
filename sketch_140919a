@@ -1,0 +1,210 @@
+Asteroid[] asteroids;
+Planet[] planets;
+Sun cursor;
+
+int stage = 1;
+String[] Plines;
+String[] Ptokens;
+String[] Alines;
+String[] Atokens;
+
+PImage bg;
+color[] Ppalette = new color[2]; //--creates an array of colors (for Planets)
+color[] Apalette = new color[2]; //--creates an array of colors (for Asteroids)
+  
+boolean sketchFullScreen() {
+  return true;
+}
+
+void setup() {
+  size(displayWidth, displayHeight);
+  for (int i = 1; i <= stage; i++) {
+    Plines = loadStrings(i+"/planets.txt");
+    planets = new Planet[Plines.length];
+    for (int j = 0; j < Plines.length; j++) {
+      Ptokens = splitTokens(Plines[j], " ");
+      planets[j] = new Planet(Float.valueOf(Ptokens[0]),
+                              (int) random(2),
+                              Float.valueOf(Ptokens[1]));
+    }
+  }
+    
+    for (int i = 1; i <= stage; i++) {
+      Alines = loadStrings(i+"/asteroids.txt");
+      asteroids = new Asteroid[Alines.length];
+      for (int j = 0; j < Alines.length; j++) {
+        Atokens = splitTokens(Alines[j], " ");
+        asteroids[j] = new Asteroid(Float.valueOf(Atokens[0]),
+                                Float.valueOf(Atokens[1]),
+                                Float.valueOf(Atokens[2]),
+                                (int) random(2),
+                                j,
+                                100 / Float.valueOf(Atokens[2]),
+                                100 / Float.valueOf(Atokens[2])); 
+      } 
+  }
+  cursor = new Sun(30);  
+  bg = loadImage("background.jpg");
+  bg.resize(width, height);
+  
+  Ppalette[0] = color(0,140,158);
+  Ppalette[1] = color(0,180,204);
+  
+  Apalette[0] = color(225,225,225);
+  Apalette[1] = color(200,200,200);   
+  
+  noCursor();
+}
+
+void draw() {
+  background(bg);
+  
+  cursor.display();
+  
+  for (int i = 0; i < Alines.length; i++) {
+    asteroids[i].Asteroids_move();
+    asteroids[i].Asteroids_display();
+  }
+  
+  for (int i = 0; i < Plines.length; i++) {
+    planets[i].Planets_move();
+    planets[i].Planets_display();
+  }
+  
+  float dist;
+  
+  for (int i = 0; i < Alines.length; i++) {
+    dist = sqrt((asteroids[i].pos_x - mouseX) * (asteroids[i].pos_x - mouseX) + (asteroids[i].pos_y - mouseY) * (asteroids[i].pos_y - mouseY));
+    if (dist < (asteroids[i].radius+cursor.radius)) {
+      textSize(100);
+      text("GAME OVER", width/2-50, height/2); 
+      fill(0, 102, 153);
+      asteroids[i].vel_x = 0;
+      asteroids[i].vel_y = 0;
+    } 
+  } 
+    
+  for (int i = 0; i < Alines.length; i++) {
+    for (int j = 0; j < Plines.length; j++) {
+     dist = sqrt((asteroids[i].pos_x - planets[j].pos_x) * (asteroids[i].pos_x - planets[j].pos_x) + (asteroids[i].pos_y - planets[j].pos_y) * (asteroids[i].pos_y - planets[j].pos_y));
+      if (dist < (asteroids[i].radius+planets[j].radius)) {
+        textSize(100);
+        text("GAME OVER", width/2-50, height/2); 
+        fill(0, 102, 153);
+        asteroids[i].vel_x = 0;
+        asteroids[i].vel_y = 0;
+      }
+    }    
+  } 
+  
+ if (mouseX == width) {
+  textSize(100);
+  text("YOU WIN", width/2-50, height/2); 
+  fill(0, 102, 153); 
+ }
+}
+
+//--Balls to dodge a.k.a Asteroids
+class Asteroid {
+  float pos_x;
+  float pos_y;
+  float radius;
+  int _color;
+  int id;
+  float vel_x;
+  float vel_y;
+  Asteroid[] others;
+  float spring = 0.05;
+  
+ Asteroid(float init_pos_x, float init_pos_y, float init_radius, int init_color, int init_id, float init_vel_x, float init_vel_y) {
+    pos_x = init_pos_x;
+    pos_y = init_pos_y;
+    radius = init_radius;
+    _color = init_color;
+    id = init_id; 
+    vel_x = init_vel_x;
+    vel_y = init_vel_y;
+  } 
+  
+  void Asteroids_move()  {
+  //--Always move
+     pos_x += vel_x;
+     pos_y += vel_y;
+     
+  //-- border
+      if(pos_x > width) {
+        pos_x = vel_x;
+      }
+      if(pos_x < 0) {
+        pos_x = width-vel_x;
+      }
+      if(pos_y > height) {
+        pos_y = vel_y; 
+      }
+      if(pos_y <0) {
+        pos_y = height-vel_y;
+      }
+  }
+  
+  void Asteroids_display(){
+    fill(Apalette[_color]);
+    noStroke();
+    ellipse(pos_x, pos_y, 2 * radius, 2 * radius);
+  }
+  
+};
+
+//--Balls following the Sun a.k.a The Planets
+class Planet {
+  float pos_x;
+  float pos_y;
+  float radius;
+  int _color;
+  float Pdist;
+  float rotationSpeed = 0;
+  
+  Planet(float init_radius, int init_color, float init_Pdist) {
+    radius = init_radius;
+    _color = init_color;
+    Pdist = init_Pdist;
+  }
+  
+  void Planets_move() {
+    rotationSpeed += 0.04;
+    
+    pos_x = Pdist * sin(rotationSpeed/Pdist*100 + PI/2) + mouseX;
+    pos_y = Pdist * sin(rotationSpeed/Pdist*100) + mouseY;
+  }
+  
+  void Planets_display() {
+    fill(Ppalette[_color]);
+    noStroke();
+    ellipse(pos_x, pos_y, 2 * radius, 2 * radius);
+  }
+  
+};
+
+//--Cursor ball a.k.a The Sun
+class Sun { 
+  float radius;
+  
+  Sun(float init_radius) {
+    radius = init_radius; 
+  }
+  
+  void display() {
+    float red = 255;
+    float green = 225;
+    float blue = 0;
+    noStroke();
+    
+    for (float r = radius; r > 0; --r) {
+      colorMode(RGB, 255, 255, 255);
+      fill(red,green,blue);
+      ellipse(mouseX, mouseY, 2 * r , 2 * r);
+      red = (red + 1) % 360;
+      green = (green + 1) % 360;
+      blue = (blue + 1) % 360;
+    }
+  }
+};
